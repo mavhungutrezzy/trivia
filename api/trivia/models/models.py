@@ -1,4 +1,22 @@
+import uuid
+
 from database.database import db
+
+
+class User(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(50), unique=True)
+    email = db.Column(db.String(), unique=True)
+    password = db.Column(db.String())
+
+    def add(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
 
 
 class Category(db.Model):
