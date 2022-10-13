@@ -11,12 +11,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from api.trivia.auth.auth import token_required
 from api.trivia.models.models import Question, User
+from caching import cache
 
 trivia = Blueprint("trivia", __name__)
 
 
 @trivia.route("/questions", methods=["GET"])
 @token_required
+@cache.cached(timeout=50)
 def get_questions(current_user):
 
     # paginate questions
@@ -66,6 +68,7 @@ def post_questions(current_user):
         abort(HTTPStatus.BAD_REQUEST)
 
 
+@cache.cached(timeout=50)
 @trivia.route("/categories/<int:category_id>/questions", methods=["GET"])
 def get_questions_by_category(category_id):
 

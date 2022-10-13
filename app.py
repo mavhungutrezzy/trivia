@@ -2,11 +2,11 @@ from flasgger import Swagger
 from flask import Flask
 from flask_migrate import Migrate
 
+from api.trivia.routes.route import trivia
+from caching import cache
 from database import database
 
 migrate = Migrate()
-
-from api.trivia.routes.route import trivia
 
 
 def create_app():
@@ -16,6 +16,7 @@ def create_app():
     database.init_db(app)
     migrate.init_app(app, database.db)
     Swagger(app)
+    cache.init_app(app)
     app.register_blueprint(trivia)
 
     if app.config["TESTING"]:
