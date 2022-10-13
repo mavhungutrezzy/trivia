@@ -10,7 +10,7 @@ from flask import jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from api.trivia.auth.auth import token_required
-from api.trivia.models.models import Question, User
+from api.trivia.models.models import Category, Question, User
 from caching import cache
 
 trivia = Blueprint("trivia", __name__)
@@ -21,23 +21,28 @@ trivia = Blueprint("trivia", __name__)
 @cache.cached(timeout=50)
 def get_questions(current_user):
 
-    # paginate questions
-    page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 10, type=int)
-    start = (page - 1) * limit
-    end = start + limit
-
-    questions = Question.query.all()
-    formatted_questions = [question.format() for question in questions]
-
-    if not formatted_questions:
+    # paginate questions using paginate method from SQLAlchemy
+    questions = Question.query.paginate(
+        page=request.args.get("page", 1, type=int),
+        per_page=request.args.get("per_page", 1, type=int),
+        error_out=False,
+    )
+    if not questions.items:
         abort(HTTPStatus.NOT_FOUND)
 
-    return {
-        "success": True,
-        "questions": formatted_questions[start:end],
-        "total_questions": len(formatted_questions),
-    }
+    return jsonify(
+        {
+            "message": "Questions retrieved successfully",
+            "data": {
+                "questions": [question.format() for question in questions.items],
+                "total_questions": questions.total,
+                "categories": {
+                    category.id: category.name for category in Category.query.all()
+                },
+                "current_category": None,
+            },
+        }
+    )
 
 
 @trivia.route("/questions", methods=["POST"])
@@ -72,24 +77,25 @@ def post_questions(current_user):
 @trivia.route("/categories/<int:category_id>/questions", methods=["GET"])
 def get_questions_by_category(category_id):
 
-    # paginate questions
-    page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 10, type=int)
-    start = (page - 1) * limit
-    end = start + limit
-
-    questions = Question.query.filter_by(category_id=category_id).all()
-    formatted_questions = [question.format() for question in questions]
-
-    if not formatted_questions:
+    # paginate questions paginate method from SQLAlchemy
+    questions = Question.query.filter_by(category_id=category_id).paginate(
+        page=request.args.get("page", 1, type=int),
+        per_page=request.args.get("per_page", 1, type=int),
+        error_out=False,
+    )
+    if not questions.items:
         abort(HTTPStatus.NOT_FOUND)
 
-    return {
-        "success": True,
-        "questions": formatted_questions[start:end],
-        "total_questions": len(formatted_questions),
-        "current_category": category_id,
-    }
+    return jsonify(
+        {
+            "message": "Questions retrieved successfully",
+            "data": {
+                "questions": [question.format() for question in questions.items],
+                "total_questions": questions.total,
+                "current_category": category_id,
+            },
+        }
+    )
 
 
 @trivia.route("/users/login", methods=["POST"])
