@@ -73,8 +73,9 @@ def post_questions(current_user):
         abort(HTTPStatus.BAD_REQUEST)
 
 
-@cache.cached(timeout=50)
 @trivia.route("/categories/<int:category_id>/questions", methods=["GET"])
+@cache.cached(timeout=50)
+@token_required
 def get_questions_by_category(category_id):
 
     # paginate questions paginate method from SQLAlchemy
@@ -96,6 +97,24 @@ def get_questions_by_category(category_id):
             },
         }
     )
+
+
+@trivia.route("/questions/<int:question_id>", methods=["DELETE"])
+@token_required
+def delete_question(question_id):
+    try:
+        question = Question.query.filter_by(id=question_id).one_or_none()
+        if question is None:
+            abort(HTTPStatus.NOT_FOUND)
+        question.delete()
+        return jsonify(
+            {
+                "message": "Question deleted successfully",
+                "data": {"deleted": question_id},
+            }
+        )
+    except Exception:
+        abort(HTTPStatus.BAD_REQUEST)
 
 
 @trivia.route("/users/login", methods=["POST"])
