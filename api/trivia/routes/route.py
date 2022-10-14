@@ -7,21 +7,32 @@ from flasgger import swag_from
 from flask import Blueprint, abort
 from flask import current_app as app
 from flask import jsonify, request
+from flask_cors import cross_origin
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from api.trivia.auth.auth import token_required
+from api.trivia.auth.auth import require_auth
 from api.trivia.models.models import Category, Question, User
-from caching import cache
+from api.trivia.utils.caching import cache
+from api.trivia.utils.error import AuthError
 
 trivia = Blueprint("trivia", __name__)
 
 
-@trivia.route("/questions", methods=["GET"])
-@token_required
-@cache.cached(timeout=50)
-def get_questions(current_user):
+@trivia.errorhandler(AuthError)
+def handle_auth_error(exception):
+    "Handles Authentication Errors"
+    response = jsonify(exception.error)
+    response.status_code = exception.status_code
+    return response
 
-    # paginate questions using paginate method from SQLAlchemy
+
+@trivia.route("/questions", methods=["GET"])
+@cache.cached(timeout=50)
+@cross_origin(headers=["Content-Type", "Authorization"])
+@require_auth
+def get_questions():
+
+    # Query the database for all questions and paginate the results
     questions = Question.query.paginate(
         page=request.args.get("page", 1, type=int),
         per_page=request.args.get("per_page", 1, type=int),
@@ -46,10 +57,11 @@ def get_questions(current_user):
 
 
 @trivia.route("/questions", methods=["POST"])
-@token_required
-def post_questions(current_user):
+@cross_origin(headers=["Content-Type", "Authorization"])
+@require_auth
+def post_questions():
 
-    # post a new question
+    # Get the request data
     body = request.get_json()
     new_question = body.get("question", None)
     new_answer = body.get("answer", None)
@@ -75,10 +87,11 @@ def post_questions(current_user):
 
 @trivia.route("/categories/<int:category_id>/questions", methods=["GET"])
 @cache.cached(timeout=50)
-@token_required
+@cross_origin(headers=["Content-Type", "Authorization"])
+@require_auth
 def get_questions_by_category(category_id):
 
-    # paginate questions paginate method from SQLAlchemy
+    # Query the database for all questions and paginate the results
     questions = Question.query.filter_by(category_id=category_id).paginate(
         page=request.args.get("page", 1, type=int),
         per_page=request.args.get("per_page", 1, type=int),
@@ -100,8 +113,8 @@ def get_questions_by_category(category_id):
 
 
 @trivia.route("/questions/<int:question_id>", methods=["DELETE"])
-@token_required
 def delete_question(question_id):
+    """This endpoint deletes a question using a question ID."""
     try:
         question = Question.query.filter_by(id=question_id).one_or_none()
         if question is None:
