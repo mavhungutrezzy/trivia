@@ -3,7 +3,7 @@ from flask import Flask
 from flask_migrate import Migrate
 
 from api.trivia.routes.route import trivia
-from caching import cache
+from api.trivia.utils.caching import cache
 from database import database
 
 migrate = Migrate()

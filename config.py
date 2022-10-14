@@ -12,6 +12,9 @@ class Config(object):
     CSRF_ENABLED = True
     SECRET_KEY = os.getenv("SECRET_KEY")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
+    API_AUDIENCE = os.environ.get("API_AUDIENCE")
+    ALGORITHMS = os.getenv("ALGORITHMS")
 
 
 class DevelopmentConfig(Config):
